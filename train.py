@@ -11,6 +11,7 @@ from utils import load_data
 from keras.preprocessing.image import ImageDataGenerator
 from mixup_generator import MixupGenerator
 from random_eraser import get_random_eraser
+from age_estimation.model import get_mn_model
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -86,9 +87,10 @@ def main():
     y_data_g = np_utils.to_categorical(gender, 2)
     y_data_a = np_utils.to_categorical(age, 101)
 
-    model = WideResNet(image_size, depth=depth, k=k)()
+    #model = WideResNet(image_size, depth=depth, k=k)()
+    model = get_mn_model(image_size)
     opt = get_optimizer(opt_name, lr)
-    model.compile(optimizer=opt, loss=["categorical_crossentropy", "categorical_crossentropy"],
+    model.compile(optimizer=opt, loss=["categorical_crossentropy", "categorical_crossentropy"], loss_weights=[0.1, 0.9],
                   metrics=['accuracy'])
 
     logging.debug("Model summary...")

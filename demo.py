@@ -5,6 +5,7 @@ import numpy as np
 import argparse
 from contextlib import contextmanager
 from wide_resnet import WideResNet
+from age_estimation.model import get_mn_model
 from keras.utils.data_utils import get_file
 
 pretrained_model = "https://github.com/yu4u/age-gender-estimation/releases/download/v0.5/weights.28-3.73.hdf5"
@@ -91,7 +92,8 @@ def main():
 
     # load model and weights
     img_size = 64
-    model = WideResNet(img_size, depth=depth, k=k)()
+    model = get_mn_model(img_size)
+    #model = WideResNet(img_size, depth=depth, k=k)()
     model.load_weights(weight_file)
 
     image_generator = yield_images_from_dir(image_dir) if image_dir else yield_images()

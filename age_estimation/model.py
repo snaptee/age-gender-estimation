@@ -1,6 +1,5 @@
-import better_exceptions
-from keras.applications import ResNet50, InceptionResNetV2
-from keras.layers import Dense
+from keras.applications import ResNet50, InceptionResNetV2, MobileNetV2
+from keras.layers import Dense, GlobalAveragePooling2D, AveragePooling2D, Flatten
 from keras.models import Model
 from keras import backend as K
 
@@ -28,8 +27,20 @@ def get_model(model_name="ResNet50"):
     return model
 
 
+def get_mn_model(input_size):
+    print('input_size', input_size)
+    base = MobileNetV2(input_shape=(input_size, input_size, 3), include_top=False, weights='imagenet')
+    #top_layer = GlobalAveragePooling2D()(base.output)
+    pool = AveragePooling2D(pool_size=(8, 8), strides=(1, 1), padding="same")(base.output)
+    flatten = Flatten()(pool)
+    gender_layer = Dense(2, activation='softmax', name='pred_gender')(flatten)
+    age_layer = Dense(101, activation='softmax', name='pred_age')(flatten)
+
+    model = Model(inputs=base.input, outputs=[gender_layer, age_layer])
+    return model
+
 def main():
-    model = get_model("InceptionResNetV2")
+    model = get_model("ResNet50")
     model.summary()
 
 
