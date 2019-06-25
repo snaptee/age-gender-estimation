@@ -1,4 +1,5 @@
 # Age and Gender Estimation
+
 This is a Keras implementation of a CNN for estimating age and gender from a face image [1, 2].
 In training, [the IMDB-WIKI dataset](https://data.vision.ee.ethz.ch/cvl/rrothe/imdb-wiki/) is used.
 
@@ -7,6 +8,43 @@ In training, [the IMDB-WIKI dataset](https://data.vision.ee.ethz.ch/cvl/rrothe/i
 - [Aug. 11, 2018] Add age estimation sub-project [here](age_estimation)
 - [Jul. 5, 2018] The UTKFace dataset became available for training.
 - [Apr. 10, 2018] Evaluation result on the APPA-REAL dataset was added.
+
+## Snaptee modification
+- mobilenetV2 is used instead of wide_res_net, because it is much smaller and faster (so we can train
+  it with CPU).  Accuracy is as good as the original one.  A pooling layer and a dense layer is put
+  on top of the final conv layer of mobilenet, mimic the original author's implementation.
+
+- Mega Asian Age dataset is used, because we target asian, and the dataset is larger than utkface.
+  However, gender is not labeled in this dataset, so the model and associated code have all
+  gender-related parts removed.
+  After downloading dataset, create training data by
+  `python3 create_db_megaage.py -i data/megaage_asian -o megaage.mat`
+
+
+## Snaptee training advice
+`python3 train.py --input megaage.mat --lr 0.001 --opt adam --aug`
+Takes about 3 hours on mega asian dataset with CPU. The best val_loss is around 3.0
+
+
+## Convert to mlmodel and test it
+Install Pillow and coremltools first
+```
+import coremltools
+from coremltools.models import MLModel
+from PIL import Image
+from mobilenet import get_mobile_net
+m = get_mobile_net(64)
+m.load_weights('checkpoints/weights.XXXXXXXXX.hdf5')
+coreml_model = coremltools.converters.keras.convert(m, image_input_names='input_1', input_names='input_1')
+
+im = Image.open('/Users/XXXXXXX/Desktop/Irene_Bae.jpg')
+out = coreml_model.predict({ 'input_1': im.resize((64,64)) })
+np.arange(0, 101).dot(out['output1'])  # predicted age
+
+model_fp16_spec = coremltools.utils.convert_neural_network_spec_weights_to_fp16(coreml_model.get_spec())
+coremltools.utils.save_spec(model_fp16_spec, 'AgeEstimation_16.mlmodel')
+coremltools.utils.save_spec(coreml_model.get_spec(), 'AgeEstimation.mlmodel')
+```
 
 ## Dependencies
 - Python3.5+
