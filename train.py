@@ -11,7 +11,8 @@ from utils import load_data
 from keras.preprocessing.image import ImageDataGenerator
 from mixup_generator import MixupGenerator
 from random_eraser import get_random_eraser
-from age_estimation.model import get_mn_model
+from mobilenet import get_mobile_net
+from keras.applications.mobilenet import preprocess_input
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -82,15 +83,13 @@ def main():
     output_path.mkdir(parents=True, exist_ok=True)
 
     logging.debug("Loading data...")
-    image, gender, age, _, image_size, _ = load_data(input_path)
+    image, age, _, image_size, _ = load_data(input_path)
     X_data = image
-    y_data_g = np_utils.to_categorical(gender, 2)
     y_data_a = np_utils.to_categorical(age, 101)
 
-    #model = WideResNet(image_size, depth=depth, k=k)()
-    model = get_mn_model(image_size)
+    model = get_mobile_net(image_size)
     opt = get_optimizer(opt_name, lr)
-    model.compile(optimizer=opt, loss=["categorical_crossentropy", "categorical_crossentropy"], loss_weights=[0.1, 0.9],
+    model.compile(optimizer=opt, loss=["categorical_crossentropy"],
                   metrics=['accuracy'])
 
     logging.debug("Model summary...")
@@ -111,27 +110,28 @@ def main():
     indexes = np.arange(data_num)
     np.random.shuffle(indexes)
     X_data = X_data[indexes]
-    y_data_g = y_data_g[indexes]
     y_data_a = y_data_a[indexes]
     train_num = int(data_num * (1 - validation_split))
     X_train = X_data[:train_num]
     X_test = X_data[train_num:]
-    y_train_g = y_data_g[:train_num]
-    y_test_g = y_data_g[train_num:]
     y_train_a = y_data_a[:train_num]
     y_test_a = y_data_a[train_num:]
 
     if use_augmentation:
+        # mobilenet in keras require preprocessing, but it is found that the trained model is
+        # better without preprocessing, so we skip it.
+        eraser = get_random_eraser(v_l=0, v_h=255)
+
         datagen = ImageDataGenerator(
             width_shift_range=0.1,
             height_shift_range=0.1,
             horizontal_flip=True,
-            preprocessing_function=get_random_eraser(v_l=0, v_h=255))
-        training_generator = MixupGenerator(X_train, [y_train_g, y_train_a], batch_size=batch_size, alpha=0.2,
+            preprocessing_function=eraser)
+        training_generator = MixupGenerator(X_train, y_train_a, batch_size=batch_size, alpha=0.01,
                                             datagen=datagen)()
         hist = model.fit_generator(generator=training_generator,
                                    steps_per_epoch=train_num // batch_size,
-                                   validation_data=(X_test, [y_test_g, y_test_a]),
+                                   validation_data=(X_test, y_test_a),
                                    epochs=nb_epochs, verbose=1,
                                    callbacks=callbacks)
     else:
