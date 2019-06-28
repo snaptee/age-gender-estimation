@@ -25,6 +25,9 @@ In training, [the IMDB-WIKI dataset](https://data.vision.ee.ethz.ch/cvl/rrothe/i
 `python3 train.py --input megaage.mat --lr 0.001 --opt adam --aug`
 Takes about 3 hours on mega asian dataset with CPU. The best val_loss is around 3.0
 
+Using OpenCL on AMD card is about speed up by about 40%.  Install pliadml and use config it to use
+opencl first.
+`KERAS_BACKEND=plaidml.keras.backend python3 train.py --input megaage.mat --lr 0.001 --opt adam --aug`
 
 ## Convert to mlmodel and test it
 Install Pillow and coremltools first
